@@ -1,36 +1,89 @@
-import { useState } from 'react'
-import { useEffect } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React, { useEffect, useState } from 'react'
+import Search from './Components/Search.jsx';
+import Spinner from './Components/Spinner.jsx';
 
-const Card = ({title}) => {
-const [hasLiked, setHasLiked] = useState(false);
-useEffect (() => {
-  console.log(`${title}has been liked: ${hasLiked}`)
-})
+const API_BASE_URL = "https://api.themoviedb.org/3";
 
-  return(
-    <div className='card'><h2>{title}</h2>
+const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 
-    <button onClick={() => setHasLiked(!hasLiked)}> {hasLiked ? 'liked' : 'like'}
-    </button>
-   
-    </div>
+const API_OPTIONS = {
+  method: "GET",
+  headers: {
+    accept:"application/json",
+    authorization: `Bearer ${API_KEY}`,
+  }
+}
+
+function App() {
+const[searchTerm, setSearchTerm] = useState("");
+const[errorMessage, setErrorMessage] = useState(null);
+const[movieList, setMovieList] = useState([]);
+const[isLoading, setIsLoading] = useState(false);
+
+const fetchMovies = async () => {
+  setIsLoading(true);
+  setErrorMessage('');
+
+  try{
+    const endpoint = `${API_BASE_URL}/discover/movie?sort_by=popularity.desc`;
+    const response = await fetch(endpoint, API_OPTIONS);
+    
+    if(!response.ok) {
+      throw new error("failed to fetch movies");
+    }
+
+    const data = await response.json();
+
+    if(data.response === 'false') {
+      setErrorMessage(data.error || "failed to fetch movies")
+      setMovieList([]);
+      return;
+    }
+      setMovieList(data.results || []);
+    console.log(data);
+  } catch (error) {
+    console.error(`error fetching movie: ${error}`);
+    setErrorMessage("Error fetching movie,please try again later.");
+  } finally {
+    setIsLoading(false);
+  }
+}
+
+useEffect(() => {
+  fetchMovies();
+}, []);
+
+  return (
+ <main>
+<div className='pattern' />
+
+<div className='wrapper'>
+  <header>
+    <img src='./hero.png' alt='Hero Banner'></img>
+<h1 >Find <span className='text-gradient'>Movies</span> You'll Enjoy Without The Hassle</h1>
+<Search searchTerm={searchTerm} setSearchTerm={setSearchTerm}/>
+  </header>
+
+  <section className='all-movies'>
+
+<h2 className='mt-[40px]'>ALL MOVIES</h2>
+
+    {isLoading ? (
+      <Spinner />
+    ) : errorMessage ? (
+      <p className='text-red-500'>{errorMessage}</p>
+    ) : (
+      <ul>
+        {movieList.map((movie) => (
+          <p key = {movie.id} className='text-white'>{movie.title}</p>
+        ))}
+      </ul>
+    )}
+  </section>
+
+</div>
+ </main>
   )
-};
+}
 
-const App= () => {
-
-
-  return(
-    <div className='card-container'>
-    <Card title="WWE RAW"/>
-    <Card title="WWE SMACKDOWN"/>
-    <Card title="WWE NXT"/>
-    </div>
-  )
-}; 
-  
-  
-export default App
+export default App;
